@@ -106,7 +106,7 @@ void ICACHE_RAM_ATTR dmx_interrupt_handler(void) {
   }
 }
 
-//static void uart_ignore_char(char c) { (void) c;  return; }
+static void uart_ignore_char(char c) { (void) c;  return; }
 
 uint16_t dmx_get_tx_fifo_room(dmx_t* dmx) {
     if(dmx == 0 || dmx->state == DMX_NOT_INIT)
@@ -410,6 +410,10 @@ void espDMX::begin(uint8_t dir, byte* buf, uint16_t min_chans, bool invert) {
       _dmx = NULL;
       return;
     }
+
+    // ensure no OS serial printing:
+    system_set_os_print(0);
+    ets_install_putc1(&uart_ignore_char);
 
     // Initialize variables
     _dmx->dmx_nr = _dmx_nr;
@@ -1193,9 +1197,6 @@ void espDMX::handler() {
       if (millis() >= _dmx->full_uni_time) {
         _dmx->txSize = 512;
       } else {
-        // stop sending dmx fulltime if no new data
-        if (!_dmx->newDMX)
-          return;
         _dmx->txSize = _dmx->numChans;
       }
 
@@ -1219,11 +1220,11 @@ void espDMX::handler() {
     // Allow last channel to be fully sent
     delayMicroseconds(44);
     
-    // BREAK of >92us, typical 176us
+    // BREAK of ~176us
     dmx_tx_set(_dmx, LOW);
-    delayMicroseconds(100);
-
-    // MAB (mark after break) of >12us
+    delayMicroseconds(176);
+    
+    // MAB (mark after break) of ~12us
     dmx_tx_set(_dmx, HIGH);
     delayMicroseconds(12);
 

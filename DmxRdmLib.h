@@ -12,11 +12,6 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Ge
 
 You should have received a copy of the GNU General Public License along with this program.
 If not, see http://www.gnu.org/licenses/
-
-
-NOTE: You may want to use below to ensure no OS serial printing:
-system_set_os_print(0);
-ets_install_putc1(&uart_ignore_char);
 */
 
 #ifndef espDMX_h
