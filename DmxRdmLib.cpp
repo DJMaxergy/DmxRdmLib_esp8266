@@ -64,7 +64,6 @@ void ICACHE_RAM_ATTR dmx_interrupt_handler(void) {
 
   interrupts();
 
-
   // RDM replies
   if (rdmInUse) {
     if ((U0IS & (1 << UIBD)) || ( U0IS & (1 << UIFR))) {    // RX0 Break Detect
@@ -109,30 +108,30 @@ void ICACHE_RAM_ATTR dmx_interrupt_handler(void) {
 static void uart_ignore_char(char c) { (void) c;  return; }
 
 uint16_t dmx_get_tx_fifo_room(dmx_t* dmx) {
-    if(dmx == 0 || dmx->state == DMX_NOT_INIT)
-        return 0;
-    return UART_TX_FIFO_SIZE - ((USS(dmx->dmx_nr) >> USTXC) & 0xff);
+  if(dmx == 0 || dmx->state == DMX_NOT_INIT)
+      return 0;
+  return UART_TX_FIFO_SIZE - ((USS(dmx->dmx_nr) >> USTXC) & 0xff);
 }
 
 void dmx_flush(dmx_t* dmx) {
-    if(dmx == 0 || dmx->state == DMX_NOT_INIT)
-        return;
+  if(dmx == 0 || dmx->state == DMX_NOT_INIT)
+      return;
 
-    uint32_t tmp = 0x00000000;
-    tmp |= (1 << UCTXRST);
+  uint32_t tmp = 0x00000000;
+  tmp |= (1 << UCTXRST);
 
-    // Clear TX Fifo
-    USC0(dmx->dmx_nr) |= (tmp);
-    USC0(dmx->dmx_nr) &= ~(tmp);
+  // Clear TX Fifo
+  USC0(dmx->dmx_nr) |= (tmp);
+  USC0(dmx->dmx_nr) &= ~(tmp);
 }
 
 void rx_flush() {
-    uint32_t tmp = 0x00000000;
-    tmp |= (1 << UCRXRST);
+  uint32_t tmp = 0x00000000;
+  tmp |= (1 << UCRXRST);
 
-    // Clear RX Fifo
-    USC0(0) |= (tmp);
-    USC0(0) &= ~(tmp);
+  // Clear RX Fifo
+  USC0(0) |= (tmp);
+  USC0(0) &= ~(tmp);
 }
 
 // TX and RX are both inverted together
@@ -151,39 +150,39 @@ void dmx_set_conf(dmx_t* dmx) {
 }
 
 void dmx_interrupt_enable(dmx_t* dmx) {
-    if(dmx == 0 || dmx->state == DMX_NOT_INIT)
-        return;
+  if(dmx == 0 || dmx->state == DMX_NOT_INIT)
+      return;
 
-    // Clear all interupt bits
-    USIC(dmx->dmx_nr) = 0x1ff;
+  // Clear all interupt bits
+  USIC(dmx->dmx_nr) = 0x1ff;
 
-    if (dmx->dmx_nr == 1) {
-      // Set TX Fifo Empty trigger point
-      USC1(1) = (0 << UCFET);
+  if (dmx->dmx_nr == 1) {
+    // Set TX Fifo Empty trigger point
+    USC1(1) = (0 << UCFET);
 
-      // UART at 250k for DMX data
-      USD(1) = (ESP8266_CLOCK / DMX_TX_BAUD);
-      dmx_set_conf(dmx);
-    }
+    // UART at 250k for DMX data
+    USD(1) = (ESP8266_CLOCK / DMX_TX_BAUD);
+    dmx_set_conf(dmx);
+  }
 
-    // Attach out interupt handler function
-    ETS_UART_INTR_ATTACH(&dmx_interrupt_handler, NULL);
+  // Attach out interupt handler function
+  ETS_UART_INTR_ATTACH(&dmx_interrupt_handler, NULL);
 
-    // Enable UART Interrupts
-    ETS_UART_INTR_ENABLE();
+  // Enable UART Interrupts
+  ETS_UART_INTR_ENABLE();
 
-    // UART0 setup
-    if (!timer1Set) {
-      timer1Set = true;
+  // UART0 setup
+  if (!timer1Set) {
+    timer1Set = true;
 
-      // UART at 250k for DMX data
-      USD(0) = (ESP8266_CLOCK / DMX_TX_BAUD);
-      dmx_set_conf(dmx);
-      USC1(0) = (127 << UCFFT);
+    // UART at 250k for DMX data
+    USD(0) = (ESP8266_CLOCK / DMX_TX_BAUD);
+    dmx_set_conf(dmx);
+    USC1(0) = (127 << UCFFT);
 
-      // Disable RX Fifo Full & Break Detect & Frame Error Interupts
-      //USIE(0) &= ~((1 << UIFF) | (1 << UIBD) | (1 << UIFR));
-    }
+    // Disable RX Fifo Full & Break Detect & Frame Error Interupts
+    //USIE(0) &= ~((1 << UIFF) | (1 << UIBD) | (1 << UIFR));
+  }
 }
 
 void dmx_interrupt_arm(dmx_t* dmx) {
@@ -281,45 +280,45 @@ void dmx_set_buffer(dmx_t* dmx, byte* buf) {
 }
 
 void dmx_uninit(dmx_t* dmx) {
-    if(dmx == 0 || dmx->state == DMX_NOT_INIT)
-        return;
+  if(dmx == 0 || dmx->state == DMX_NOT_INIT)
+      return;
 
-    dmx_interrupt_disarm(dmx);
-    dmx_flush(dmx);
+  dmx_interrupt_disarm(dmx);
+  dmx_flush(dmx);
 
-    // Go to idle
-    dmx_tx_set(dmx, HIGH);
+  // Go to idle
+  dmx_tx_set(dmx, HIGH);
 
-    // Set DMX direction to input so no garbage is sent out
-    if (dmx->dirPin != 255)
-      digitalWrite(dmx->dirPin, LOW);
+  // Set DMX direction to input so no garbage is sent out
+  if (dmx->dirPin != 255)
+    digitalWrite(dmx->dirPin, LOW);
 
-    if (dmx->dmx_nr == rxUser) {
-      rdm_interrupt_disarm();
-      rx_flush();
-    }
+  if (dmx->dmx_nr == rxUser) {
+    rdm_interrupt_disarm();
+    rx_flush();
+  }
 
-    if (dmx->rdm_enable) {
-      dmx->rdm_enable = 0;
-      digitalWrite(dmx->dirPin, HIGH);
+  if (dmx->rdm_enable) {
+    dmx->rdm_enable = 0;
+    digitalWrite(dmx->dirPin, HIGH);
 
-      dmx->todManID = (uint16_t*)realloc(dmx->todManID, 0);
-      dmx->todDevID = (uint32_t*)realloc(dmx->todDevID, 0);
+    dmx->todManID = (uint16_t*)realloc(dmx->todManID, 0);
+    dmx->todDevID = (uint32_t*)realloc(dmx->todDevID, 0);
 
-      dmx->rdmCallBack = NULL;
-      dmx->todCallBack = NULL;
-    }
+    dmx->rdmCallBack = NULL;
+    dmx->todCallBack = NULL;
+  }
 
-    os_free(dmx->data1);
-    dmx->data1 = NULL;
+  os_free(dmx->data1);
+  dmx->data1 = NULL;
 
-    dmx->isInput = false;
-    dmx->inputCallBack = NULL;
-  
-    if (dmx->ownBuffer) {
-      os_free(dmx->data);
-      dmx->ownBuffer = 0;
-    }
+  dmx->isInput = false;
+  dmx->inputCallBack = NULL;
+
+  if (dmx->ownBuffer) {
+    os_free(dmx->data);
+    dmx->ownBuffer = 0;
+  }
 }
 
 int dmx_get_state(dmx_t* dmx) {
@@ -335,55 +334,66 @@ void dmx_set_chans(dmx_t* dmx, uint8_t* data, uint16_t num, uint16_t start) {
   if(dmx == NULL || dmx->state == DMX_NOT_INIT)
     return;
 
-  dmx->started = true;
-  dmx->newDMX = true;
-
   if (data == NULL || start == 0 || start > 512 || num == 0)
     return;
 
-  uint16_t newNum = start - 1 + num;
-  if (newNum > 512) {
-    int16_t difference = newNum - 512;
-    newNum -= difference;
-    num -= difference;
+  dmx->started = true;
+
+  uint16_t newNum = start + num - 1;
+  if (newNum > 512)
+    newNum = 512;
+
+  // Is there any new channel data
+  if (memcmp(data, &(dmx->data[start-1]), num) != 0) {
+    // Find the highest channel with new data
+    for (; newNum >= dmx->numChans; newNum--, num--) {
+      if (dmx->data[newNum-1] != data[num-1])
+        break;
+    }
+    newNum += DMX_ADD_CHANS;
+
+    // If we receive tiny data input, just output minimum channels
+    if (newNum < dmx->minChans)
+      newNum = dmx->minChans;
+      
+    // Put data into our buffer
+    memcpy(&(dmx->data[start-1]), data, num);
+
+    if (newNum > dmx->numChans)
+      dmx->numChans = (newNum > 512) ? 512 : newNum;
+
+    dmx->newDMX = true;
   }
-
-  // Find the highest channel with new data
-  for (; num > 0; newNum--, num--) {
-    if (dmx->data[newNum-1] != data[num-1])
-      break;
-  }
-
-  // Put data into our buffer
-  memcpy(&(dmx->data[start-1]), data, num);
-
-  // Recalc high watermark
-  if (newNum > dmx->numChans)
-    dmx->numChans = newNum;
 }
 
 void dmx_buffer_update(dmx_t* dmx, uint16_t num) {
   if(dmx == NULL || dmx->state == DMX_NOT_INIT)
     return;
 
-  dmx->started = true;
-  dmx->newDMX = true;
-
   // We don't need to recalc the buffer high watermark
   if(num <= dmx->numChans)
     return;
 
+  dmx->started = true;
+  
   if (num > 512)
     num = 512;
 
-  // Find the highest channel with non-zero data
-  for (; num > dmx->numChans; num--) {
+  // Find the highest channel with data
+  for (; num >= dmx->numChans; num--) {
     if (dmx->data[num-1] != 0)
       break;
   }
+  num += DMX_ADD_CHANS;
 
+  // If we receive tiny data input, just output minimum channels
+  if (num < dmx->minChans)
+    num = dmx->minChans;
+      
   if (num > dmx->numChans)
-    dmx->numChans = num;
+    dmx->numChans = (num > 512) ? 512 : num;
+
+  dmx->newDMX = true;
 }
 
 
@@ -902,7 +912,6 @@ void espDMX::rdmEnable(uint16_t ManID, uint32_t DevID) {
   if (_dmx == 0 || _dmx->dirPin == 255 || dmx_input)
     return;
   
-
     // RDM Variables
   _dmx->rx_pos = 0;
   _dmx->rdm_trans_no = 0;
@@ -958,7 +967,6 @@ uint16_t espDMX::todCount() {
   return _dmx->tod_size;
 }
 
-
 uint16_t* espDMX::todMan() {
   if (_dmx == 0 || !_dmx->rdm_enable)
     return NULL;
@@ -986,7 +994,6 @@ uint32_t espDMX::todDev(uint16_t n) {
 
   return _dmx->todDevID[n];
 }
-
 
 void espDMX::rdmSetCallBack(rdmCallBackFunc callback) {
   if (_dmx == 0)
@@ -1027,7 +1034,6 @@ void rdmPause(bool p) {
     dmxB.rdmDiscovery(RDM_DISCOVERY_FULL);
   }
 }
-
 
 void espDMX::dmxIn(bool doIn) {
   if (_dmx == 0)
@@ -1228,6 +1234,9 @@ void espDMX::handler() {
     dmx_tx_set(_dmx, HIGH);
     delayMicroseconds(12);
 
+    // Change pin to UART mode
+    pinMode(_dmx->txPin, SPECIAL);
+
     // Empty FIFO
     dmx_flush(_dmx);
 
@@ -1257,9 +1266,6 @@ void espDMX::handler() {
       USF(_dmx->dmx_nr) = 0xCC;
     }
 
-    // Change TX pin to UART mode AFTER TX is started to avoid protocol glitch
-    pinMode(_dmx->txPin, SPECIAL);
-
     fillTX();
 }
 
@@ -1274,17 +1280,3 @@ void espDMX::fillTX(void) {
 
   dmx_interrupt_arm(_dmx);
 }
-
-
-
-/* from stream class
-int espDMX::available(void) { return 0; }
-int espDMX::peek(void) { return 0; }
-int espDMX::read(void) { return 0; }
-void espDMX::flush(void) { return; }
-size_t espDMX::write(uint8_t) { return 0; }
-
-espDMX::operator bool() const {
-    return _dmx != 0;
-}
-*/

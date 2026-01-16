@@ -17,20 +17,6 @@ If not, see http://www.gnu.org/licenses/
 #ifndef espDMX_h
 #define espDMX_h
 
-#define DMX_MAX_BYTES_PER_INT 3		// How many bytes to send per interrupt
-#define DMX_TX_CONF           0x3c   	// SERIAL_8N2
-#define DMX_TX_BAUD           250000
-#define DMX_FULL_UNI_TIMING   800   	// How often to output full 512 channel universe (in milliseconds)
-#define DMX_NO_LED            200
-#define DMX_MIN_CHANS         30     	// Default minimum channels output
-#define UART_TX_FIFO_SIZE     0x80
-
-#define RDM_DISCOVERY_INC_TIME    700       // How often to run incremental discovery
-#define RDM_DISCOVERY_INCREMENTAL 0
-#define RDM_DISCOVERY_FULL        1
-#define RDM_DISCOVERY_TOD_WIPE    2
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,16 +30,27 @@ extern "C" {
 }
 #include "Stream.h"
 
-
 #include "rdm.h"
 #include "rdmDataTypes.h"
 #include "rdmFIFO.h"
 
+#define DMX_MAX_BYTES_PER_INT 3		// How many bytes to send per interrupt
+#define DMX_TX_CONF           0x3c   	// SERIAL_8N2
+#define DMX_TX_BAUD           250000
+#define DMX_FULL_UNI_TIMING   800   	// How often to output full 512 channel universe (in milliseconds)
+#define DMX_NO_LED            200
+#define DMX_MIN_CHANS         30     	// Default minimum channels output
+#define DMX_ADD_CHANS         30     	// Add extra buffer to the number of channels output
+#define UART_TX_FIFO_SIZE     0x80
+
+#define RDM_DISCOVERY_INC_TIME    700       // How often to run incremental discovery
+#define RDM_DISCOVERY_INCREMENTAL 0
+#define RDM_DISCOVERY_FULL        1
+#define RDM_DISCOVERY_TOD_WIPE    2
 
 typedef void(*rdmCallBackFunc)(rdm_data*);
 typedef void(*todCallBackFunc)(void);
 typedef void(*inputCallBackFunc)(uint16_t);
-
 
 // DMX states
 enum dmx_state {
@@ -73,7 +70,6 @@ union byte_uint64 {
 	byte b[8];
 	uint64_t u;
 };
-
 
 struct dmx_ {
 	uint8_t dmx_nr;
@@ -167,20 +163,10 @@ public:
 	}
 	void setChans(byte*, uint16_t, uint16_t);
 
-
 	void chanUpdate(uint16_t);
 	void clearChans();
 	byte *getChans();
 	uint16_t numChans();
-
-	/*  from stream class
-			int available(void) override;
-			int peek(void) override;
-			int read(void) override;
-			void flush(void) override;
-			size_t write(uint8_t) override;
-			operator bool() const;
-	*/
 
 	void rdmEnable(uint16_t, uint32_t);
 	void rdmDisable(void);
@@ -246,9 +232,8 @@ private:
 	dmx_t* _dmx;
 };
 
-
 extern espDMX dmxA;
 extern espDMX dmxB;
 extern void rdmPause(bool);
-#endif
 
+#endif // espDMX_h
